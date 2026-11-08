@@ -12,6 +12,15 @@ Tablero Kanban local para organizar tareas. Los requisitos están en [Requiremen
 | `npm run verify` | Lint, tipos, pruebas y build de producción |
 | `npm run preview` | Sirve el build de producción |
 
+## Docker
+
+```sh
+docker build -t fluidmanage .
+docker run --rm -p 8080:8080 fluidmanage
+```
+
+La app queda en http://localhost:8080. Los datos siguen guardándose en el navegador de cada usuario, así que el contenedor no necesita volúmenes.
+
 ## Estructura
 
 - `src/domain`: reglas del tablero como funciones puras (operaciones, validación del JSON, filtros y orden).
@@ -28,4 +37,4 @@ Tablero Kanban local para organizar tareas. Los requisitos están en [Requiremen
 - CSV protegido contra inyección de fórmulas; en Excel todas las celdas se escriben como texto.
 - El build de producción incluye una CSP estricta sin acceso a red.
 
-Al desplegar, añade en el servidor las cabeceras que una etiqueta `<meta>` no puede aplicar, como `Content-Security-Policy: frame-ancestors 'none'` y `X-Content-Type-Options: nosniff`.
+La imagen de Docker ya las incluye. Si despliegas de otra forma, añade en el servidor las cabeceras que una etiqueta `<meta>` no puede aplicar, como `Content-Security-Policy: frame-ancestors 'none'` y `X-Content-Type-Options: nosniff`.
