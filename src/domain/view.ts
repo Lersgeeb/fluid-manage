@@ -1,4 +1,4 @@
-import { orderedColumns, sortedTasks } from './board';
+import { applyTaskOrder, moveTask, orderedColumns, sortedTasks } from './board';
 import { PRIORITIES } from './constants';
 import type { Board, Column, Comment, Priority, Task } from './types';
 
@@ -49,7 +49,14 @@ function arrange(tasks: Task[], view: ViewOptions): Task[] {
   return tasks.toSorted(view.sortDirection === 'asc' ? compare : (a, b) => compare(b, a));
 }
 
-export function getVisibleColumns(board: Board, view: ViewOptions): VisibleColumn[] {
+export const NO_MANUAL_COLUMNS: ReadonlySet<string> = new Set();
+
+/** `manualColumnIds` are columns the user reordered by hand, which the active sort skips. */
+export function getVisibleColumns(
+  board: Board,
+  view: ViewOptions,
+  manualColumnIds: ReadonlySet<string> = NO_MANUAL_COLUMNS,
+): VisibleColumn[] {
   const isVisible = (task: Task) =>
     (view.showHidden || !task.hidden) &&
     (view.tag === null || task.tag === view.tag) &&
@@ -57,7 +64,10 @@ export function getVisibleColumns(board: Board, view: ViewOptions): VisibleColum
 
   return orderedColumns(board)
     .filter((column) => view.showArchive || !column.isArchive)
-    .map((column) => ({ column, tasks: arrange(sortedTasks(column).filter(isVisible), view) }));
+    .map((column) => {
+      const tasks = sortedTasks(column).filter(isVisible);
+      return { column, tasks: manualColumnIds.has(column.id) ? tasks : arrange(tasks, view) };
+    });
 }
 
 export function priorityCounts(tasks: readonly Task[]): Record<Priority, number> {
@@ -123,6 +133,32 @@ export const isColumnDropId = (id: string) => id.startsWith(COLUMN_DROP_PREFIX);
 export interface DropTarget {
   toColumnId: string;
   beforeTaskId: string | null;
+}
+
+/**
+ * Applies a drop. A sorted order is computed, so a card dropped inside a sorted
+ * column would snap back; instead the sorted sequence becomes the column's
+ * manual order first, and `sortOverridden` tells the caller to stop sorting it.
+ */
+export function moveWithinView(
+  board: Board,
+  view: ViewOptions,
+  manualColumnIds: ReadonlySet<string>,
+  taskId: string,
+  { toColumnId, beforeTaskId }: DropTarget,
+): { board: Board; sortOverridden: boolean } {
+  const source = board.columns.find((column) => column.tasks.some((task) => task.id === taskId));
+  const isSortedReorder =
+    view.sortBy !== 'manual' && source?.id === toColumnId && !manualColumnIds.has(toColumnId);
+
+  if (!source || !isSortedReorder) {
+    return { board: moveTask(board, taskId, toColumnId, beforeTaskId), sortOverridden: false };
+  }
+
+  const sequence = arrange(sortedTasks(source), view).map((task) => task.id);
+  const adopted = applyTaskOrder(board, source.id, sequence);
+  const moved = moveTask(adopted, taskId, toColumnId, beforeTaskId);
+  return moved === adopted ? { board, sortOverridden: false } : { board: moved, sortOverridden: true };
 }
 
 /** Translates a drag gesture over the visible cards into a board position. */

@@ -8,6 +8,7 @@ import {
   DEFAULT_VIEW,
   getVisibleColumns,
   latestComments,
+  moveWithinView,
   priorityCounts,
   resolveDrop,
   type ViewOptions,
@@ -114,6 +115,64 @@ describe('getVisibleColumns', () => {
     const b: Board = { columns: [makeColumn('c', 0, tasks)] };
     expect(visibleIds(b, { sortDirection: 'desc' })).toEqual([['c', ['a', 'b']]]);
     expect(tasks.map((t) => t.id)).toEqual(['b', 'a']);
+  });
+});
+
+describe('moveWithinView', () => {
+  const NONE = new Set<string>();
+  const byPriority = view({ sortBy: 'priority', sortDirection: 'desc' });
+  const sortedBoard = (): Board => ({
+    columns: [
+      makeColumn('a', 0, [
+        makeTask('low', 0, { columnId: 'a' }),
+        makeTask('med', 1, { columnId: 'a', priority: 'medium' }),
+        makeTask('high', 2, { columnId: 'a', priority: 'high' }),
+      ]),
+      makeColumn('b', 1, [makeTask('other', 0, { columnId: 'b' })]),
+    ],
+  });
+  const shown = (b: Board, manual: ReadonlySet<string>, options = byPriority) =>
+    getVisibleColumns(b, options, manual)[0]!.tasks.map((t) => t.id);
+
+  it('keeps a vertical move where it was dropped while sorted', () => {
+    const result = moveWithinView(sortedBoard(), byPriority, NONE, 'low', { toColumnId: 'a', beforeTaskId: 'high' });
+    expect(result.sortOverridden).toBe(true);
+    expect(shown(result.board, new Set(['a']))).toEqual(['low', 'high', 'med']);
+  });
+
+  it('persists the dropped sequence as the manual order', () => {
+    const { board } = moveWithinView(sortedBoard(), byPriority, NONE, 'low', { toColumnId: 'a', beforeTaskId: 'high' });
+    expect(shown(board, NONE, view())).toEqual(['low', 'high', 'med']);
+  });
+
+  it('places tasks hidden by a filter according to the sort', () => {
+    const filtered = view({ sortBy: 'priority', sortDirection: 'desc', priority: 'high' });
+    const b = sortedBoard();
+    const { board } = moveWithinView(b, filtered, NONE, 'med', { toColumnId: 'a', beforeTaskId: 'high' });
+    expect(shown(board, NONE, view())).toEqual(['med', 'high', 'low']);
+  });
+
+  it('builds on the current order once a column has been reordered', () => {
+    const manual = new Set(['a']);
+    const first = moveWithinView(sortedBoard(), byPriority, NONE, 'low', { toColumnId: 'a', beforeTaskId: 'high' });
+    const second = moveWithinView(first.board, byPriority, manual, 'med', { toColumnId: 'a', beforeTaskId: 'low' });
+    expect(second.sortOverridden).toBe(false);
+    expect(shown(second.board, manual)).toEqual(['med', 'low', 'high']);
+  });
+
+  it('changes nothing when dropped on its own sorted position', () => {
+    const b = sortedBoard();
+    const result = moveWithinView(b, byPriority, NONE, 'high', { toColumnId: 'a', beforeTaskId: 'med' });
+    expect(result.board).toBe(b);
+    expect(result.sortOverridden).toBe(false);
+  });
+
+  it('does not override the sort for moves in manual order or between columns', () => {
+    const b = sortedBoard();
+    expect(moveWithinView(b, view(), NONE, 'low', { toColumnId: 'a', beforeTaskId: null }).sortOverridden).toBe(false);
+    const across = moveWithinView(b, byPriority, NONE, 'low', { toColumnId: 'b', beforeTaskId: null });
+    expect(across.sortOverridden).toBe(false);
+    expect(across.board.columns[1]!.tasks.map((t) => t.id)).toEqual(['other', 'low']);
   });
 });
 

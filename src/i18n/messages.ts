@@ -103,7 +103,6 @@ const es = {
   'filters.view': 'Vista',
   'filters.showHidden': 'Mostrar ocultas',
   'filters.showArchive': 'Mostrar archivo',
-  'filters.dragHint': 'Arrastrar solo está disponible en orden manual.',
 
   'sort.manual': 'Manual',
   'sort.priority': 'Prioridad',
@@ -268,7 +267,6 @@ const en: Record<MessageKey, string> = {
   'filters.view': 'View',
   'filters.showHidden': 'Show hidden',
   'filters.showArchive': 'Show archive',
-  'filters.dragHint': 'Dragging is only available in manual order.',
 
   'sort.manual': 'Manual',
   'sort.priority': 'Priority',

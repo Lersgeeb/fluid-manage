@@ -595,11 +595,11 @@ describe('opening a task', () => {
     vi.unstubAllGlobals();
   });
 
-  it('marks cards as draggable only in manual order', async () => {
+  it('marks cards as draggable under any sort', async () => {
     const { user } = renderApp(sampleBoard());
     expect(screen.getByRole('article', { name: 'alpha' })).toHaveClass('card--draggable');
     await user.selectOptions(screen.getByLabelText('Ordenar por'), 'priority');
-    expect(screen.getByRole('article', { name: 'alpha' })).not.toHaveClass('card--draggable');
+    expect(screen.getByRole('article', { name: 'alpha' })).toHaveClass('card--draggable');
   });
 });
 
@@ -660,11 +660,20 @@ describe('filters and display', () => {
     expect(order()).toEqual(['beta', 'alpha']);
   });
 
-  it('disables dragging outside manual order', async () => {
+  it('keeps dragging available under any sort', async () => {
     const { user } = renderApp(sampleBoard());
     expect(screen.getAllByRole('button', { name: /^Arrastrar/ })).toHaveLength(2);
     await user.selectOptions(screen.getByLabelText('Ordenar por'), 'priority');
-    expect(screen.queryByRole('button', { name: /^Arrastrar/ })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^Arrastrar/ })).toHaveLength(2);
+  });
+
+  it('never allows dragging archived tasks', async () => {
+    const board = sampleBoard();
+    board.columns.push({ id: 'z', title: 'Archivo', order: 3, isArchive: true, tasks: [makeTask('gamma', 'z', 0)] });
+    const { user } = renderApp(board);
+    await toggleView(user, 'Mostrar archivo');
+    expect(screen.getByRole('article', { name: 'gamma' })).not.toHaveClass('card--draggable');
+    expect(screen.queryByRole('button', { name: 'Arrastrar gamma' })).not.toBeInTheDocument();
   });
 
   it('selects the card text', async () => {

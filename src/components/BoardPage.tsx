@@ -5,6 +5,8 @@ import {
   collectTagOptions,
   DEFAULT_VIEW,
   getVisibleColumns,
+  moveWithinView,
+  NO_MANUAL_COLUMNS,
   type CardTextMode,
   type DropTarget,
   type ViewOptions,
@@ -43,16 +45,24 @@ export function BoardPage() {
   const [textMode, setTextMode] = useState<CardTextMode>('description');
   const [dialog, setDialog] = useState<DialogState>(null);
   const [addingColumn, setAddingColumn] = useState(false);
+  const [manualColumns, setManualColumns] = useState(NO_MANUAL_COLUMNS);
 
   const tags = useMemo(() => collectTagOptions(board), [board]);
 
   // A tag can disappear (deleted task, import) while still selected as filter.
   const effectiveTag = tags.some(({ tag }) => tag === view.tag) ? view.tag : null;
   const effectiveView = useMemo(() => ({ ...view, tag: effectiveTag }), [view, effectiveTag]);
-  const columns = useMemo(() => getVisibleColumns(board, effectiveView), [board, effectiveView]);
+  const columns = useMemo(
+    () => getVisibleColumns(board, effectiveView, manualColumns),
+    [board, effectiveView, manualColumns],
+  );
 
   const closeDialog = useCallback(() => setDialog(null), []);
-  const changeView = useCallback((patch: Partial<ViewOptions>) => setView((v) => ({ ...v, ...patch })), []);
+  const changeView = useCallback((patch: Partial<ViewOptions>) => {
+    setView((v) => ({ ...v, ...patch }));
+    // Choosing a sort again is how columns reordered by hand get sorted again.
+    if (patch.sortBy !== undefined || patch.sortDirection !== undefined) setManualColumns(NO_MANUAL_COLUMNS);
+  }, []);
 
   const columnActions = useMemo<ColumnActions>(
     () => ({
@@ -136,12 +146,20 @@ export function BoardPage() {
   const cancelAddingColumn = useCallback(() => setAddingColumn(false), []);
 
   const moveTask = useCallback(
-    (taskId: string, drop: DropTarget) =>
-      store.update((b) => ops.moveTask(b, taskId, drop.toColumnId, drop.beforeTaskId)),
-    [store],
+    (taskId: string, drop: DropTarget) => {
+      let sortOverridden = false;
+      store.update((b) => {
+        const result = moveWithinView(b, effectiveView, manualColumns, taskId, drop);
+        sortOverridden = result.sortOverridden;
+        return result.board;
+      });
+      if (sortOverridden) setManualColumns((current) => new Set(current).add(drop.toColumnId));
+    },
+    [store, effectiveView, manualColumns],
   );
 
-  const reportRows = (scope: ReportScope) => buildReportRows(reportColumns(store.getBoard(), effectiveView, scope));
+  const reportRows = (scope: ReportScope) =>
+    buildReportRows(reportColumns(store.getBoard(), effectiveView, scope, manualColumns));
 
   const runExport = async (work: () => void | Promise<void>) => {
     try {
@@ -162,6 +180,7 @@ export function BoardPage() {
         });
         if (!accepted) return;
         store.replace(imported);
+        setManualColumns(NO_MANUAL_COLUMNS);
         setDialog(null);
         notify('success', 'notice.imported');
       } catch (error) {
@@ -210,7 +229,6 @@ export function BoardPage() {
       <BoardView
         columns={columns}
         textMode={textMode}
-        canDrag={view.sortBy === 'manual'}
         actions={columnActions}
         addingColumn={addingColumn}
         onAddColumn={addColumn}

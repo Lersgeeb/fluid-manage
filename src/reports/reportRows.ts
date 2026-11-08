@@ -39,8 +39,13 @@ export const CSV_FIELDS = [
 
 export const EXCEL_FIELDS = [...CSV_FIELDS, 'lastComment'] as const satisfies readonly (keyof ReportRow)[];
 
-export function reportColumns(board: Board, view: ViewOptions, scope: ReportScope): VisibleColumn[] {
-  if (scope === 'visible') return getVisibleColumns(board, view);
+export function reportColumns(
+  board: Board,
+  view: ViewOptions,
+  scope: ReportScope,
+  manualColumnIds?: ReadonlySet<string>,
+): VisibleColumn[] {
+  if (scope === 'visible') return getVisibleColumns(board, view, manualColumnIds);
   return orderedColumns(board).map((column) => ({ column, tasks: sortedTasks(column) }));
 }
 

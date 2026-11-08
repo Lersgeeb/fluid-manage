@@ -45,7 +45,6 @@ interface ColumnViewProps {
   column: Column;
   tasks: Task[];
   textMode: CardTextMode;
-  canDrag: boolean;
   isFirst: boolean;
   isLast: boolean;
   actions: ColumnActions;
@@ -55,7 +54,6 @@ export const ColumnView = memo(function ColumnView({
   column,
   tasks,
   textMode,
-  canDrag,
   isFirst,
   isLast,
   actions,
@@ -63,7 +61,7 @@ export const ColumnView = memo(function ColumnView({
   const { t } = useI18n();
   const [renaming, setRenaming] = useState(false);
   const isArchive = Boolean(column.isArchive);
-  const draggable = canDrag && !isArchive;
+  const draggable = !isArchive;
   const { setNodeRef, isOver } = useDroppable({ id: columnDropId(column.id), disabled: !draggable });
   const taskIds = useMemo(() => tasks.map((task) => task.id), [tasks]);
   const name = column.title;

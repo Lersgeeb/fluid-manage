@@ -139,12 +139,6 @@ button:not(:disabled) {
   min-width: 130px;
 }
 
-.filters__hint {
-  align-self: center;
-  color: var(--muted);
-  font-size: 12px;
-}
-
 .check {
   display: inline-flex;
   align-items: center;
@@ -973,10 +967,6 @@ textarea.input {
 
   .filters .field {
     min-width: 0;
-  }
-
-  .filters__hint {
-    grid-column: 1 / -1;
   }
 
   .board {

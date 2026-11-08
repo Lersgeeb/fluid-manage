@@ -166,6 +166,22 @@ export function moveTask(board: Board, taskId: string, toColumnId: string, befor
   });
 }
 
+/** Makes a column's manual order match the given sequence of task ids. */
+export function applyTaskOrder(board: Board, columnId: string, taskIds: readonly string[]): Board {
+  const positions = new Map(taskIds.map((id, position) => [id, position]));
+  return replaceColumns(board, (column) =>
+    column.id === columnId
+      ? {
+          ...column,
+          tasks: column.tasks.map((task) => {
+            const order = positions.get(task.id);
+            return order === undefined || order === task.order ? task : { ...task, order };
+          }),
+        }
+      : column,
+  );
+}
+
 export function archiveTask(board: Board, taskId: string, archiveTitle: string, ctx: OperationContext): Board {
   const found = locate(board, taskId);
   if (!found || found.column.isArchive) return board;

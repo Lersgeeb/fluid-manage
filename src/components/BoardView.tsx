@@ -36,7 +36,6 @@ const detectCollision: CollisionDetection = (args) => {
 interface BoardViewProps {
   columns: VisibleColumn[];
   textMode: CardTextMode;
-  canDrag: boolean;
   actions: ColumnActions;
   addingColumn: boolean;
   onAddColumn: (title: string) => void;
@@ -47,7 +46,6 @@ interface BoardViewProps {
 export function BoardView({
   columns,
   textMode,
-  canDrag,
   actions,
   addingColumn,
   onAddColumn,
@@ -102,7 +100,6 @@ export function BoardView({
             column={column}
             tasks={tasks}
             textMode={textMode}
-            canDrag={canDrag}
             isFirst={index === 0}
             isLast={index === activeColumnCount - 1}
             actions={actions}

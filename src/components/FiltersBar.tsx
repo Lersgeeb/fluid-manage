@@ -105,8 +105,6 @@ export const FiltersBar = memo(function FiltersBar({
           <option value="desc">{t('filters.desc')}</option>
         </select>
       </label>
-
-      {isManual ? null : <p className="filters__hint">{t('filters.dragHint')}</p>}
     </div>
   );
 });

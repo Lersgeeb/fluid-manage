@@ -213,6 +213,24 @@ describe('moveTask', () => {
   });
 });
 
+describe('applyTaskOrder', () => {
+  const start = board(makeColumn('a', 0, ['1', '2', '3']), makeColumn('b', 1, ['4']));
+
+  it('rewrites positions to match the given sequence', () => {
+    expect(ids(ops.applyTaskOrder(start, 'a', ['3', '1', '2']), 'a')).toEqual(['3', '1', '2']);
+  });
+
+  it('leaves other columns and already-correct tasks untouched', () => {
+    const next = ops.applyTaskOrder(start, 'a', ['1', '3', '2']);
+    expect(column(next, 'b')).toBe(column(start, 'b'));
+    expect(task(next, '1')).toBe(task(start, '1'));
+  });
+
+  it('does not change modification dates', () => {
+    expect(task(ops.applyTaskOrder(start, 'a', ['3', '2', '1']), '3').updatedAt).toBe(OLD);
+  });
+});
+
 describe('archive and restore', () => {
   it('creates the archive on first use and stores origin and date', () => {
     const b = ops.archiveTask(board(makeColumn('a', 0, ['x'])), 'x', 'Archive', ctx);
